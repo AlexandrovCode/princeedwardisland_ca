@@ -179,6 +179,7 @@ class Handler(Extract, GetPages):
             addr = addr.replace('\n', ' ')
             #print(addr)
             # splitted_addr = addr.split('\n')
+            #print(addr)
             addr = addr[0] if type(addr) == list else addr
             temp = {
                 'fullAddress': addr + ', Canada',
@@ -216,6 +217,7 @@ class Handler(Extract, GetPages):
         dates = self.get_by_xpath(tree,
                                   '//table[@id="tblPreviousCompanyNames"]//tr[@class="row"]//tr[@class="row"]//td[2]/span/text() | //table[@id="tblPreviousCompanyNames"]//tr[@class="row"]//tr[@class="rowalt"]//td[2]/span/text()',
                                   return_list=True)
+        print(names)
         if names:
             names = [i for i in names if i != '']
         if names and dates:
@@ -279,8 +281,10 @@ class Handler(Extract, GetPages):
                 self.overview[fieldName] = el[0] if type(el) == list else el
 
             if fieldName == 'previous_names':
-                if len(el) > 1:
-                    self.overview[fieldName] = {'name': [el.strip()]}
+                el = el.strip()
+                el = el.split('\n')
+                if len(el) < 1:
+                    self.overview[fieldName] = {'name': [el[0].strip()]}
                 else:
                     el = [i.strip() for i in el]
                     res = []
@@ -301,11 +305,15 @@ class Handler(Extract, GetPages):
                 self.overview[fieldName] = self.reformat_date(el, '%d.%m.%Y')
 
             if fieldName == 'agent':
+                #print(el)
                 self.overview[fieldName] = {
                     'name': el.split('\n')[0],
                     'mdaas:RegisteredAddress': self.get_address(returnAddress=True, addr=' '.join(el.split('\n')[1:]),
                                                                 zipPattern='[A-Z]\d[A-Z]\s\d[A-Z]\d')
                 }
+                #print(self.get_address(returnAddress=True, addr=' '.join(el.split('\n')[1:]),
+                                                                #zipPattern='[A-Z]\d[A-Z]\s\d[A-Z]\d'))
+
 
     def check_tree(self):
         print(self.tree.xpath('//text()'))
@@ -350,6 +358,7 @@ class Handler(Extract, GetPages):
         except:
             return None
         #print(self.api)
+        #print(self.api)
 
         self.overview['isDomiciledIn'] = 'CA'
         # self.overview['bst:sourceLinks'] = link_name
@@ -363,6 +372,7 @@ class Handler(Extract, GetPages):
         self.fillField('identifiers', key='Registration Number')
         self.fillField('Service', key='Business In')
         self.fillField('agent', key='Chief Agent')
+        self.fillField('previous_names', key='Former Name(s)')
         self.fillField('regExpiryDate', key='Expiry Date', reformatDate='%d-%b-%Y')
         self.overview[
             'bst:registryURI'] = f'https://www.princeedwardisland.ca/en/feature/pei-business-corporate-registry-original#/service/LegacyBusiness/LegacyBusinessView;e=LegacyBusinessView;business_number={self.api["Registration Number"]}'
@@ -388,7 +398,7 @@ class Handler(Extract, GetPages):
 
         # self.overview['@source-id'] = self.NICK_NAME
 
-        # print(self.overview)
+        #print(self.overview)
         return self.overview
 
     def get_officership(self, link_name):
@@ -413,6 +423,7 @@ class Handler(Extract, GetPages):
                     'type': 'individual',
                     'officer_role': r,
                     'status': 'Active',
+                    'occupation': r,
                     'information_source': self.base_url,
                     'information_provider': 'Prince Edward Island Corporate Registry'}
             off.append(home)
@@ -461,8 +472,11 @@ class Handler(Extract, GetPages):
 
         try:
             names = self.get_by_api('Shareholder(s)')
+            if len(re.findall('\d+', names)) > 0:
+                return edd, sholdersl1
             if '\n' in names:
                 names = names.split('\n')
+
             holders = [names] if type(names) == str else names
 
             for i in range(len(holders)):
@@ -487,5 +501,5 @@ class Handler(Extract, GetPages):
             "entity_type": "C",
             "shareholders": shareholders
         }
-        print(sholdersl1)
+        #print(sholdersl1)
         return edd, sholdersl1
